@@ -182,7 +182,7 @@ namespace Flax.Build
                 break;
             default: throw new InvalidPlatformException(buildPlatform);
             }
-            var referenceAssemblies = Path.Combine(monoRoot, "lib", "mono", "4.5-api");
+            var referenceAssemblies = Path.Combine(monoRoot, "lib", "mono", "4.8-api");
             if (fileReferences == null)
                 fileReferences = buildOptions.ScriptingAPI.FileReferences;
             else
@@ -206,7 +206,7 @@ namespace Flax.Build
             args.Add("/warn:4");
             args.Add("/unsafe");
             args.Add("/fullpaths");
-            args.Add("/langversion:7.3");
+            args.Add("/langversion:8.0");
             if (buildOptions.ScriptingAPI.IgnoreMissingDocumentationWarnings)
                 args.Add("-nowarn:1591");
             args.Add(buildData.Configuration == TargetConfiguration.Debug ? "/optimize-" : "/optimize+");

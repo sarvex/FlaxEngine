@@ -98,11 +98,13 @@ typedef struct {
 extern MonoProfilerState mono_profiler_state;
 
 typedef struct {
+	guchar *cil_code;
+	guint32 count;
+} MonoProfilerCoverageInfoEntry;
+
+typedef struct {
 	guint32 entries;
-	struct {
-		guchar *cil_code;
-		guint32 count;
-	} data [1];
+	MonoProfilerCoverageInfoEntry data [MONO_ZERO_LEN_ARRAY];
 } MonoProfilerCoverageInfo;
 
 void mono_profiler_started (void);
@@ -133,6 +135,10 @@ struct _MonoProfilerCallContext {
 	 * is set to NULL.
 	 */
 	gpointer return_value;
+	/*
+	 * Points to an array of addresses of stack slots holding the arguments.
+	 */
+	gpointer *args;
 };
 
 MonoProfilerCallInstrumentationFlags mono_profiler_get_call_instrumentation_flags (MonoMethod *method);

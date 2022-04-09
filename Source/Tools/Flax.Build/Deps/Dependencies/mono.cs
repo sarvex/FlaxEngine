@@ -55,217 +55,33 @@ namespace Flax.Deps.Dependencies
         private string monoPreprocesorDefines;
         private static List<string> monoExports;
 
-        private static readonly string[] MonoExportsCustom =
+        private void Autogen(string host, string[] monoOptions, string buildDir, Dictionary<string, string> envVars = null)
         {
-            "mono_value_box",
-            "mono_add_internal_call",
-        };
+            var args = string.Format("--host={0} \"--prefix={2}\" {1}", host, string.Join(" ", monoOptions), buildDir.Replace('\\', '/'));
+            if (envVars != null)
+            {
+                foreach (var e in envVars)
+                {
+                    if (e.Key == "PATH")
+                        continue;
+                    if (e.Value.Contains(' '))
+                        args += $" \"{e.Key}={e.Value}\"";
+                    else
+                        args += $" {e.Key}={e.Value}";
+                }
+            }
+            RunBash(Path.Combine(root, "autogen.sh"), args, root, envVars);
+        }
 
-        private static readonly string[] MonoExportsIncludePrefixes =
+        private void Make(Dictionary<string, string> envVars = null)
         {
-            "mono_free",
-            "mono_array_",
-            "mono_assembly_",
-            "mono_class_",
-            "mono_custom_attrs_",
-            "mono_debug_",
-            "mono_domain_",
-            "mono_exception_",
-            "mono_field_",
-            "mono_free_",
-            "mono_gc_",
-            "mono_gchandle_",
-            "mono_get_",
-            "mono_image_",
-            "mono_metadata_",
-            "mono_method_",
-            "mono_object_",
-            "mono_profiler_",
-            "mono_property_",
-            "mono_raise_exception",
-            "mono_reflection_",
-            "mono_runtime_",
-            "mono_signature_",
-            "mono_stack_",
-            "mono_string_",
-            "mono_thread_",
-            "mono_type_",
-            "mono_value_",
-        };
+            RunBash("make", string.Format("-j {0}", Environment.ProcessorCount), root, envVars);
+            RunBash("make", "install", root, envVars);
+        }
 
-        private static readonly string[] MonoExportsSkipPrefixes =
+        private void BuildMsvc(BuildOptions options, TargetPlatform platform, TargetArchitecture architecture)
         {
-            "mono_type_to_",
-            "mono_thread_state_",
-            "mono_thread_internal_",
-            "mono_thread_info_",
-            "mono_array_get_",
-            "mono_array_to_byvalarray",
-            "mono_assembly_apply_binding",
-            "mono_assembly_invoke_search_hook_internal",
-            "mono_assembly_is_in_gac",
-            "mono_assembly_load_from_gac",
-            "mono_assembly_load_full_gac_base_default",
-            "mono_assembly_load_publisher_policy",
-            "mono_assembly_name_from_token",
-            "mono_assembly_remap_version",
-            "mono_assembly_try_decode_skip_verification",
-            "mono_class_create_runtime_vtable",
-            "mono_class_from_name_checked_aux",
-            "mono_class_get_appdomain_do_type_resolve_method",
-            "mono_class_get_exception_handling_clause_class",
-            "mono_class_get_field_idx",
-            "mono_class_get_local_variable_info_class",
-            "mono_class_get_pointer_class",
-            "mono_class_get_runtime_generic_context_template",
-            "mono_class_get_virtual_methods",
-            "mono_class_has_default_constructor",
-            "mono_class_has_gtd_parent",
-            "mono_class_has_parent",
-            "mono_class_implement_interface_slow",
-            "mono_class_is_ginst",
-            "mono_class_is_gtd",
-            "mono_class_is_interface",
-            "mono_class_is_magic_assembly",
-            "mono_class_is_valid_generic_instantiation",
-            "mono_class_is_variant_compatible_slow",
-            "mono_class_need_stelemref_method",
-            "mono_class_proxy_vtable",
-            "mono_class_setup_vtable_full",
-            "mono_class_try_get_unmanaged_function_pointer_attribute_class",
-            "mono_class_unregister_image_generic_subclasses",
-            "mono_custom_attrs_construct_by_type",
-            "mono_custom_attrs_data_construct",
-            "mono_debug_add_assembly",
-            "mono_debug_format",
-            "mono_debug_handles",
-            "mono_debug_initialized",
-            "mono_debug_log_thread_state_to_string",
-            "mono_debug_open_image",
-            "mono_debug_read_method",
-            "mono_domain_asmctx_from_path",
-            "mono_domain_assembly_preload",
-            "mono_domain_assembly_search",
-            "mono_domain_create_appdomain_checked",
-            "mono_domain_create_appdomain_internal",
-            "mono_domain_fire_assembly_load",
-            "mono_domain_fire_assembly_unload",
-            "mono_domain_from_appdomain_handle",
-            "mono_exception_new_argument_internal",
-            "mono_exception_new_by_name_domain",
-            "mono_exception_stacktrace_obj_walk",
-            "mono_field_get_addr",
-            "mono_field_get_rva",
-            "mono_field_resolve_flags",
-            "mono_free_static_data",
-            "mono_gc_init_finalizer_thread",
-            "mono_get_array_new_va_signature",
-            "mono_get_corlib_version",
-            "mono_get_domainvar",
-            "mono_get_exception_argument_internal",
-            "mono_get_exception_missing_member",
-            "mono_get_exception_runtime_wrapped_checked",
-            "mono_get_exception_type_initialization_checked",
-            "mono_get_field_token",
-            "mono_get_int_type",
-            "mono_get_method_from_token",
-            "mono_get_reflection_missing_object",
-            "mono_get_runtime_build_version",
-            "mono_get_seq_point_for_native_offset",
-            "mono_get_unique_iid",
-            "mono_get_version_info",
-            "mono_get_vtable_var",
-            "mono_get_xdomain_marshal_type",
-            "mono_image_add_cattrs",
-            "mono_image_add_decl_security",
-            "mono_image_add_memberef_row",
-            "mono_image_add_methodimpl",
-            "mono_image_basic_method",
-            "mono_image_create_method_token",
-            "mono_image_emit_manifest",
-            "mono_image_fill_export_table",
-            "mono_image_fill_export_table_from_class",
-            "mono_image_fill_export_table_from_module",
-            "mono_image_fill_export_table_from_type_forwarders",
-            "mono_image_fill_file_table",
-            "mono_image_fill_module_table",
-            "mono_image_get_array_token",
-            "mono_image_get_event_info",
-            "mono_image_get_field_info",
-            "mono_image_get_fieldref_token",
-            "mono_image_get_generic_param_info",
-            "mono_image_get_method_info",
-            "mono_image_get_methodspec_token",
-            "mono_image_get_property_info",
-            "mono_image_get_type_info",
-            "mono_image_walk_resource_tree",
-            "mono_metadata_class_equal",
-            "mono_metadata_field_info_full",
-            "mono_metadata_fnptr_equal",
-            "mono_metadata_generic_param_equal_internal",
-            "mono_metadata_parse_array_internal",
-            "mono_metadata_parse_generic_param",
-            "mono_metadata_parse_type_internal",
-            "mono_metadata_signature_dup_internal_with_padding",
-            "mono_metadata_signature_vararg_match",
-            "mono_method_check_inlining",
-            "mono_method_get_equivalent_method",
-            "mono_method_is_constructor",
-            "mono_method_is_valid_generic_instantiation",
-            "mono_method_is_valid_in_context",
-            "mono_object_new_by_vtable",
-            "mono_raise_exception_with_ctx",
-            "mono_reflection_get_type_internal",
-            "mono_reflection_get_type_internal_dynamic",
-            "mono_reflection_get_type_with_rootimage",
-            "mono_reflection_method_get_handle",
-            "mono_reflection_type_get_underlying_system_type",
-            "mono_runtime_capture_context",
-            "mono_runtime_delegate_try_invoke_handle",
-            "mono_runtime_set_execution_mode",
-            "mono_runtime_walk_stack_with_ctx",
-            "mono_signature_to_name",
-            "mono_string_builder_new",
-            "mono_string_from_bstr_common",
-            "mono_string_get_pinned",
-            "mono_string_is_interned_lookup",
-            "mono_string_new_utf32_checked",
-            "mono_string_to_utf8_internal",
-            "mono_thread_abort",
-            "mono_thread_abort_dummy",
-            "mono_thread_attach_cb",
-            "mono_thread_attach_internal",
-            "mono_thread_cleanup_fn",
-            "mono_thread_clear_interruption_requested",
-            "mono_thread_current_for_thread",
-            "mono_thread_detach_internal",
-            "mono_thread_execute_interruption",
-            "mono_thread_execute_interruption_ptr",
-            "mono_thread_execute_interruption_void",
-            "mono_thread_get_managed_sp",
-            "mono_thread_resume",
-            "mono_thread_set_interruption_requested",
-            "mono_thread_start_cb",
-            "mono_thread_suspend",
-            "mono_type_array_get_and_resolve_raw",
-            "mono_type_array_get_and_resolve_with_modifiers",
-            "mono_type_elements_shift_bits",
-            "mono_type_equal",
-            "mono_type_from_opcode",
-            "mono_type_get_name_recurse",
-            "mono_type_get_underlying_type_any",
-            "mono_type_hash",
-            "mono_type_init_lock",
-            "mono_type_initialization_lock",
-            "mono_type_is_enum_type",
-            "mono_type_is_native_blittable",
-            "mono_type_is_valid_in_context",
-            "mono_type_is_valid_type_in_context_full",
-            "mono_type_normalize",
-        };
-
-        private void BuildMsvc(BuildOptions options, TargetPlatform platform, TargetArchitecture architecture, string configuration = "Release")
-        {
+            string configuration = "Release";
             string buildPlatform;
             switch (architecture)
             {
@@ -278,13 +94,19 @@ namespace Flax.Deps.Dependencies
             }
 
             // Build mono
-            Deploy.VCEnvironment.BuildSolution(Path.Combine(root, "msvc", "libmono-static.vcxproj"), configuration, buildPlatform);
-            Deploy.VCEnvironment.BuildSolution(Path.Combine(root, "msvc", "monoposixhelper.vcxproj"), configuration, buildPlatform);
+            var props = new Dictionary<string, string>
+            {
+                { "MONO_USE_TARGET_SUFFIX", "false" },
+                { "MONO_USE_STATIC_LIBMONO", "true" },
+                { "MONO_ENABLE_BTLS", "true" },
+            };
+            Deploy.VCEnvironment.BuildSolution(Path.Combine(root, "msvc", "mono.sln"), configuration, buildPlatform, props);
 
             // Deploy binaries
             var binaries = new[]
             {
                 Path.Combine("lib", configuration, "libmono-static.lib"),
+                Path.Combine("bin", configuration, "libmono-btls-shared.dll"),
                 Path.Combine("bin", configuration, "MonoPosixHelper.dll"),
             };
             var srcBinaries = Path.Combine(root, "msvc", "build", "sgen", buildPlatform);
@@ -452,7 +274,7 @@ namespace Flax.Deps.Dependencies
             }
 
             // Update source file with exported symbols
-            var mCorePath = Path.Combine(Globals.EngineRoot, "Source", "Engine", "Scripting", "ManagedCLR", "MCore.Mono.cpp");
+            var mCorePath = Path.Combine(Globals.EngineRoot, "Source", "Engine", "Scripting", "ManagedCLR", "MCore.cpp");
             var contents = File.ReadAllText(mCorePath);
             var startPos = contents.IndexOf("#pragma comment(linker,");
             var endPos = contents.LastIndexOf("#pragma comment(linker,");
@@ -469,9 +291,117 @@ namespace Flax.Deps.Dependencies
             MacPlatform.FixInstallNameId(dstPath);
         }
 
+        private void DeployData(BuildOptions options, TargetPlatform platform, string buildDir, bool withEditor)
+        {
+            // Game
+            var srcMonoLibs = Path.Combine(buildDir, "lib", "mono");
+            var dstMonoFiles = Path.Combine(options.PlatformsFolder, platform.ToString(), "Binaries", "Mono");
+            CloneDirectory(Path.Combine(buildDir, "etc"), Path.Combine(dstMonoFiles, "etc"));
+
+            // Copy libs
+            var dstMonoLib = Path.Combine(dstMonoFiles, "lib", "mono");
+            SetupDirectory(dstMonoLib, true);
+            Utilities.DirectoryCopy(Path.Combine(srcMonoLibs, "4.5"), Path.Combine(dstMonoLib, "4.5"), false, true, "*.dll");
+            Utilities.DirectoryCopy(Path.Combine(srcMonoLibs, "gac"), Path.Combine(dstMonoLib, "gac"), true, true, "*.dll");
+            Utilities.FilesDelete(dstMonoLib, "*.pdb");
+
+            // Remove unused libs
+            var unusedLibs = new[]
+            {
+                "Commons.Xml.Relaxng*",
+                "cscompmgd*",
+                "CustomMarshalers*",
+                "I18N*",
+                "IBM*",
+                "Microsoft.Build.*",
+                "Microsoft.CodeAnalysis.CSharp.Scripting",
+                "Microsoft.CodeAnalysis.Scripting",
+                "Microsoft.CodeAnalysis.VisualBasic",
+                "Microsoft.VisualBasic",
+                "Microsoft.VisualC",
+                "Microsoft.Web.*",
+                "Mono.Cairo*",
+                "Mono.Cecil*",
+                "Mono.CodeContracts*",
+                "Mono.CompilerServices.SymbolWriter*",
+                "Mono.CSharp*",
+                "Mono.Data*",
+                "Mono.Debugger.Soft*",
+                "Mono.Http*",
+                "Mono.Management*",
+                "Mono.Messaging*",
+                "Mono.Parallel*",
+                "Mono.Profiler.Log*",
+                "Mono.Simd*",
+                "Mono.Tasklets*",
+                "Mono.WebBrowser*",
+                "Mono.XBuild.Tasks*",
+                "Novell.Directory.Ldap*",
+                "PEAPI*",
+                "RabbitMQ.Client*",
+                "SMDiagnostics*",
+                "WebMatrix.Data*",
+                "xsp4",
+            };
+            var editorUsedLibs = new[]
+            {
+                "Microsoft.CodeAnalysis",
+                "Microsoft.CodeAnalysis.CSharp",
+                "Microsoft.CSharp",
+            };
+            foreach (var gameUsedLib in unusedLibs)
+            {
+                Utilities.FilesDelete(dstMonoLib, gameUsedLib);
+                if (!gameUsedLib.EndsWith("*"))
+                    Utilities.FilesDelete(dstMonoLib, gameUsedLib + ".dll");
+                Utilities.DirectoriesDelete(dstMonoLib, gameUsedLib);
+            }
+            foreach (var gameUsedLib in editorUsedLibs)
+            {
+                Utilities.FilesDelete(dstMonoLib, gameUsedLib);
+                Utilities.DirectoriesDelete(dstMonoLib, gameUsedLib);
+            }
+
+            // Editor
+            if (withEditor)
+            {
+                var dstMonoEditorFiles = Path.Combine(options.PlatformsFolder, "Editor", platform.ToString(), "Mono");
+                CloneDirectory(Path.Combine(buildDir, "etc"), Path.Combine(dstMonoEditorFiles, "etc"));
+
+                // Copy libs
+                var dstMonoEditorLibs = Path.Combine(dstMonoEditorFiles, "lib", "mono");
+                SetupDirectory(dstMonoEditorLibs, true);
+                Utilities.DirectoryCopy(Path.Combine(srcMonoLibs, "4.5"), Path.Combine(dstMonoEditorLibs, "4.5"), false, true, "*.dll");
+                Utilities.DirectoryCopy(Path.Combine(srcMonoLibs, "gac"), Path.Combine(dstMonoEditorLibs, "gac"), true, true, "*.dll");
+                Utilities.FileCopy(Path.Combine(srcMonoLibs, "4.5", "csc.exe"), Path.Combine(dstMonoEditorLibs, "4.5", "csc.exe"));
+                Utilities.DirectoryCopy(Path.Combine(srcMonoLibs, "4.5", "Facades"), Path.Combine(dstMonoEditorLibs, "4.5", "Facades"), false, true, "*.dll");
+                Utilities.DirectoryCopy(Path.Combine(srcMonoLibs, "4.8-api"), Path.Combine(dstMonoEditorLibs, "4.8-api"), false, true, "*.dll");
+                Utilities.DirectoryCopy(Path.Combine(srcMonoLibs, "xbuild", "14.0"), Path.Combine(dstMonoEditorLibs, "xbuild", "14.0"), true, true);
+                Utilities.DirectoryCopy(Path.Combine(srcMonoLibs, "xbuild-frameworks", ".NETFramework", "v4.8"), Path.Combine(dstMonoEditorLibs, "xbuild-frameworks", ".NETFramework", "v4.8"), true, true);
+                Utilities.FilesDelete(dstMonoEditorLibs, "*.pdb");
+
+                // Remove unused libs
+                foreach (var gameUsedLib in unusedLibs)
+                {
+                    Utilities.FilesDelete(dstMonoEditorLibs, gameUsedLib);
+                    if (!gameUsedLib.EndsWith("*"))
+                        Utilities.FilesDelete(dstMonoEditorLibs, gameUsedLib + ".dll");
+                    Utilities.DirectoriesDelete(dstMonoEditorLibs, gameUsedLib);
+                }
+            }
+        }
+
         /// <inheritdoc />
         public override void Build(BuildOptions options)
         {
+            // Ensure the build platform is setup correctly
+            if (BuildPlatform == TargetPlatform.Windows)
+            {
+                RunBash("git", "--version");
+                RunBash("git", "lfs --version");
+                RunBash("make", "-v");
+            }
+
             // Set it to the local path of the mono rep oto use for the build instead of cloning the remote one (helps with rapid testing)
             string localRepoPath = string.Empty;
             //localRepoPath = @"D:\Flax\3rdParty\mono";
@@ -482,64 +412,88 @@ namespace Flax.Deps.Dependencies
             monoPropsPath = Path.Combine(root, "msvc", "mono.props");
 
             // Get the source
-            if (string.IsNullOrEmpty(localRepoPath))
+            if (string.IsNullOrEmpty(localRepoPath) && !Directory.Exists(Path.Combine(root, ".git")))
                 CloneGitRepo(root, "https://github.com/FlaxEngine/mono.git", null, "--recursive");
-
-            // Get the default preprocessor defines for Mono on Windows-based platforms
-            {
-                var monoProps = new XmlDocument();
-                monoProps.Load(monoPropsPath);
-
-                monoPreprocesorDefines = FindXmlNodeValue(monoProps, "MONO_PREPROCESSOR_DEFINITIONS");
-            }
 
             foreach (var platform in options.Platforms)
             {
                 // Pick a proper branch
-                var monoBranch = "flax-master-5-20";
-                switch (platform)
-                {
-                case TargetPlatform.Switch:
-                case TargetPlatform.Mac:
-                    monoBranch = "flax-master-6-4";
-                    break;
-                }
-                GitCheckout(root, monoBranch);
+                GitCheckout(root, "flax-master-6-13");
                 GitResetLocalChanges(root);
+
+                // Get the default preprocessor defines for Mono on Windows-based platforms
+                if (monoPreprocesorDefines == null)
+                {
+                    var monoProps = new XmlDocument();
+                    monoProps.Load(monoPropsPath);
+                    monoPreprocesorDefines = FindXmlNodeValue(monoProps, "MONO_PREPROCESSOR_DEFINITIONS");
+                }
+
+                // Setup build directory
+                var buildDir = Path.Combine(root, "build", platform.ToString());
+                SetupDirectory(buildDir, false);
 
                 switch (platform)
                 {
                 case TargetPlatform.Windows:
                 {
-                    var configuration = "Release";
-                    BuildMsvc(options, platform, TargetArchitecture.x64, configuration);
-                    //BuildBcl(options, platform);
+                    var monoBinaries = "C:\\Program Files\\Mono\\bin";
+                    if (!File.Exists(Path.Combine(monoBinaries, "mono.exe")))
+                        throw new Exception("Missing Mono! Install it to Program Files.");
+                    var envVars = new Dictionary<string, string>
+                    {
+                        { "PATH", monoBinaries },
+                        //{ "MONO_EXECUTABLE", Path.Combine("msvc/build/sgen/x64/bin/Release/mono.exe").Replace('\\', '/') },
+                        //{ "MONO_EXECUTABLE", Path.Combine(monoBinaries, "mono.exe").Replace('\\', '/') },
+                    };
+                    var monoOptions = new[]
+                    {
+                        "--disable-boehm",
+                        "--disable-crash-reporting",
+                        //"--disable-btls",
+                        "--enable-btls",
+                        "--enable-btls-lib",
+                        //"--enable-msvc",
+                        "--enable-maintainer-mode",
+                        "--with-crash-privacy=no",
+                        "--with-mcs-docs=no",
+                        "--without-ikvm-native",
+                        "\"CFLAGS=-g -O2\"",
+                        "\"CXXFLAGS=-g -O2\"",
+                        "\"CPPFLAGS=-g -O2\"",
+                    };
 
-                    // Export header files
-                    Deploy.VCEnvironment.BuildSolution(Path.Combine(root, "msvc", "libmono-dynamic.vcxproj"), configuration, "x64");
-                    Deploy.VCEnvironment.BuildSolution(Path.Combine(root, "msvc", "build-install.vcxproj"), configuration, "x64");
+                    // Build mono
+                    Autogen("x86_64-w64-mingw32", monoOptions, buildDir, envVars);
+                    BuildMsvc(options, platform, TargetArchitecture.x64);
+                    Make(envVars);
 
                     // Get exported mono methods to forward them in engine module (on Win32 platforms)
                     GetMonoExports(options);
 
-                    if (BuildPlatform == TargetPlatform.Windows)
-                    {
-                        // Copy header files
-                        var dstIncludePath = Path.Combine(options.ThirdPartyFolder, "mono-2.0");
-                        var dstMonoIncludePath = Path.Combine(dstIncludePath, "mono");
-                        if (Directory.Exists(dstMonoIncludePath))
-                            Directory.Delete(dstMonoIncludePath, true);
-                        Utilities.DirectoryCopy(Path.Combine(root, "msvc", "include"), dstIncludePath);
-                    }
-
+                    // Deploy data
+                    var editorBinOutput = Path.Combine(options.PlatformsFolder, "Editor", platform.ToString(), "Mono", "bin");
+                    SetupDirectory(editorBinOutput, true);
+                    Utilities.FileCopy(Path.Combine(root, "msvc\\build\\sgen\\x64\\bin\\Release", "mono.exe"), Path.Combine(editorBinOutput, "mono.exe"));
+                    Utilities.FileCopy(Path.Combine(monoBinaries, "csc.bat"), Path.Combine(editorBinOutput, "csc.bat"));
+                    //CloneDirectory(Path.Combine(buildDir, "include", "mono-2.0", "mono"), Path.Combine(options.ThirdPartyFolder, "mono-2.0", "mono"));
+                    CloneDirectory(Path.Combine(root, "msvc\\include\\mono"), Path.Combine(options.ThirdPartyFolder, "mono-2.0", "mono"));
+                    DeployData(options, platform, buildDir, true);
                     break;
                 }
                 case TargetPlatform.UWP:
+                case TargetPlatform.XboxOne:
+                case TargetPlatform.XboxScarlett:
                 {
-                    ConfigureMsvc(options, "v141", "10.0.17763.0", "0x0A00", "_UWP=1;DISABLE_JIT;WINAPI_FAMILY=WINAPI_FAMILY_PC_APP;HAVE_EXTERN_DEFINED_WINAPI_SUPPORT");
+                    if (platform == TargetPlatform.UWP)
+                        ConfigureMsvc(options, "v141", "10.0.17763.0", "0x0A00", "_UWP=1;DISABLE_JIT;WINAPI_FAMILY=WINAPI_FAMILY_PC_APP;HAVE_EXTERN_DEFINED_WINAPI_SUPPORT");
+                    else
+                        ConfigureMsvc(options, "v142", "10.0.19041.0", "0x0A00", "_XBOX_ONE=1;DISABLE_JIT;WINAPI_FAMILY=WINAPI_FAMILY_GAMES;HAVE_EXTERN_DEFINED_WINAPI_SUPPORT;CRITICAL_SECTION_NO_DEBUG_INFO=0x01000000");
 
                     BuildMsvc(options, platform, TargetArchitecture.x64);
 
+                    // Mirror Mono data and libs from Windows
+                    CloneDirectory(Path.Combine(Path.Combine(options.PlatformsFolder, TargetPlatform.Windows.ToString(), "Binaries", "Mono")), Path.Combine(Path.Combine(options.PlatformsFolder, platform.ToString(), "Binaries", "Mono")));
                     break;
                 }
                 case TargetPlatform.Linux:
@@ -558,14 +512,11 @@ namespace Flax.Deps.Dependencies
                         "--with-mcs-docs=no",
                         //"--enable-static",
                     };
-                    var buildDir = Path.Combine(root, "build-linux");
 
                     // Build mono
-                    SetupDirectory(buildDir, true);
-                    var archName = UnixToolchain.GetToolchainName(platform, TargetArchitecture.x64);
-                    Utilities.Run(Path.Combine(root, "autogen.sh"), string.Format("--host={0} --prefix={1} {2}", archName, buildDir, string.Join(" ", monoOptions)), null, root, Utilities.RunOptions.Default, envVars);
-                    Utilities.Run("make", null, null, root, Utilities.RunOptions.None, envVars);
-                    Utilities.Run("make", "install", null, root, Utilities.RunOptions.None, envVars);
+                    var hostName = UnixToolchain.GetToolchainName(platform, TargetArchitecture.x64);
+                    Autogen(hostName, monoOptions, buildDir, envVars);
+                    Make(envVars);
 
                     // Deploy binaries
                     var depsFolder = GetThirdPartyFolder(options, platform, TargetArchitecture.x64);
@@ -576,41 +527,10 @@ namespace Flax.Deps.Dependencies
                     var editorLibOutput = Path.Combine(options.PlatformsFolder, "Editor", "Linux", "Mono", "lib");
                     Utilities.FileCopy(Path.Combine(buildDir, "lib", "libMonoPosixHelper.so"), Path.Combine(editorLibOutput, "libMonoPosixHelper.so"));
                     Utilities.FileCopy(Path.Combine(buildDir, "lib", "libmono-native.so"), Path.Combine(editorLibOutput, "libmono-native.so"));
-                    var editoBinOutput = Path.Combine(options.PlatformsFolder, "Editor", "Linux", "Mono", "bin");
-                    Utilities.FileCopy(Path.Combine(buildDir, "bin", "mono-sgen"), Path.Combine(editoBinOutput, "mono"));
-                    Utilities.Run("strip", "mono", null, editoBinOutput, Utilities.RunOptions.None);
-                    Utilities.DirectoryCopy(Path.Combine(buildDir, "etc"), Path.Combine(options.PlatformsFolder, platform.ToString(), "Binaries", "Mono", "etc"), true, true);
-                    Utilities.DirectoryCopy(Path.Combine(buildDir, "etc"), Path.Combine(options.PlatformsFolder, "Editor", platform.ToString(), "Binaries", "Mono", "etc"), true, true);
-                    var srcMonoLibs = Path.Combine(buildDir, "lib", "mono");
-                    var dstMonoLibs = Path.Combine(options.PlatformsFolder, platform.ToString(), "Binaries", "Mono", "lib", "mono");
-                    var dstMonoEditorLibs = Path.Combine(options.PlatformsFolder, "Editor", platform.ToString(), "Mono", "lib", "mono");
-                    Utilities.DirectoryCopy(Path.Combine(srcMonoLibs, "4.5"), Path.Combine(dstMonoLibs, "4.5"), false, true, "*.dll");
-                    Utilities.DirectoryCopy(Path.Combine(srcMonoLibs, "4.5"), Path.Combine(dstMonoEditorLibs, "4.5"), false, true, "*.dll");
-                    Utilities.DirectoryCopy(Path.Combine(srcMonoLibs, "gac"), Path.Combine(dstMonoLibs, "gac"), true, true, "*.dll");
-                    Utilities.DirectoryCopy(Path.Combine(srcMonoLibs, "gac"), Path.Combine(dstMonoEditorLibs, "gac"), true, true, "*.dll");
-                    Utilities.FileCopy(Path.Combine(srcMonoLibs, "4.5", "csc.exe"), Path.Combine(dstMonoEditorLibs, "4.5", "csc.exe"), true);
-                    Utilities.DirectoryCopy(Path.Combine(srcMonoLibs, "4.5", "Facades"), Path.Combine(dstMonoEditorLibs, "4.5", "Facades"), false, true, "*.dll");
-                    Utilities.DirectoryCopy(Path.Combine(srcMonoLibs, "4.5-api"), Path.Combine(dstMonoEditorLibs, "4.5-api"), false, true, "*.dll");
-                    Utilities.DirectoryCopy(Path.Combine(srcMonoLibs, "xbuild", "14.0"), Path.Combine(dstMonoEditorLibs, "xbuild", "14.0"), true, true);
-                    Utilities.DirectoryCopy(Path.Combine(srcMonoLibs, "xbuild-frameworks", ".NETFramework", "v4.5"), Path.Combine(dstMonoEditorLibs, "xbuild-frameworks", ".NETFramework", "v4.5"), true, true);
-                    Utilities.FilesDelete(dstMonoLibs, "*.pdb", true);
-                    Utilities.FilesDelete(dstMonoEditorLibs, "*.pdb", true);
-                    break;
-                }
-                case TargetPlatform.XboxOne:
-                {
-                    ConfigureMsvc(options, "v142", "10.0.19041.0", "0x0A00", "_XBOX_ONE=1;DISABLE_JIT;WINAPI_FAMILY=WINAPI_FAMILY_GAMES;HAVE_EXTERN_DEFINED_WINAPI_SUPPORT;CRITICAL_SECTION_NO_DEBUG_INFO=0x01000000");
-
-                    BuildMsvc(options, platform, TargetArchitecture.x64);
-
-                    break;
-                }
-                case TargetPlatform.XboxScarlett:
-                {
-                    ConfigureMsvc(options, "v142", "10.0.19041.0", "0x0A00", "_XBOX_ONE=1;DISABLE_JIT;WINAPI_FAMILY=WINAPI_FAMILY_GAMES;HAVE_EXTERN_DEFINED_WINAPI_SUPPORT;CRITICAL_SECTION_NO_DEBUG_INFO=0x01000000");
-
-                    BuildMsvc(options, platform, TargetArchitecture.x64);
-
+                    var editorBinOutput = Path.Combine(options.PlatformsFolder, "Editor", "Linux", "Mono", "bin");
+                    Utilities.FileCopy(Path.Combine(buildDir, "bin", "mono-sgen"), Path.Combine(editorBinOutput, "mono"));
+                    Utilities.Run("strip", "mono", null, editorBinOutput, Utilities.RunOptions.None);
+                    DeployData(options, platform, buildDir, true);
                     break;
                 }
                 case TargetPlatform.Android:
@@ -669,22 +589,11 @@ namespace Flax.Deps.Dependencies
                     {
                         "lib/libmonosgen-2.0.so",
                     };
-                    var buildDir = Path.Combine(root, "build-android");
-                    var envArgs = "";
-                    foreach (var e in envVars)
-                    {
-                        if (e.Value.Contains(' '))
-                            envArgs += $" \"{e.Key}={e.Value}\"";
-                        else
-                            envArgs += $" {e.Key}={e.Value}";
-                    }
 
                     // Compile mono
-                    SetupDirectory(buildDir, true);
-                    var toolchain = UnixToolchain.GetToolchainName(platform, TargetArchitecture.ARM64);
-                    Utilities.Run(Path.Combine(root, "autogen.sh"), string.Format("--host={0} --prefix={1} {2}{3}", toolchain, buildDir, string.Join(" ", monoOptions), envArgs), null, root, Utilities.RunOptions.Default, envVars);
-                    Utilities.Run("make", null, null, root, Utilities.RunOptions.None, envVars);
-                    Utilities.Run("make", "install", null, root, Utilities.RunOptions.None, envVars);
+                    var hostName = UnixToolchain.GetToolchainName(platform, TargetArchitecture.ARM64);
+                    Autogen(hostName, monoOptions, buildDir, envVars);
+                    Make(envVars);
                     var depsFolder = GetThirdPartyFolder(options, platform, TargetArchitecture.ARM64);
                     foreach (var binary in binaries)
                     {
@@ -754,14 +663,11 @@ namespace Flax.Deps.Dependencies
                         //"--enable-static",
                         "--enable-maintainer-mode",
                     };
-                    var buildDir = Path.Combine(root, "build-mac");
 
                     // Build mono
-                    SetupDirectory(buildDir, true);
-                    var archName = "x86_64-apple-darwin18";
-                    Utilities.Run(Path.Combine(root, "autogen.sh"), string.Format("--host={0} --prefix={1} {2}", archName, buildDir, string.Join(" ", monoOptions)), null, root, Utilities.RunOptions.None, envVars);
-                    Utilities.Run("make", null, null, root, Utilities.RunOptions.None, envVars);
-                    Utilities.Run("make", "install", null, root, Utilities.RunOptions.None, envVars);
+                    var hostName = "x86_64-apple-darwin18";
+                    Autogen(hostName, monoOptions, buildDir, envVars);
+                    Make(envVars);
 
                     // Deploy binaries
                     var depsFolder = GetThirdPartyFolder(options, platform, TargetArchitecture.x64);
@@ -777,30 +683,317 @@ namespace Flax.Deps.Dependencies
                     DeployDylib(Path.Combine(buildDir, "lib", "libMonoPosixHelper.dylib"), editorLibOutput);
                     DeployDylib(Path.Combine(buildDir, "lib", "libmono-btls-shared.dylib"), editorLibOutput);
                     DeployDylib(Path.Combine(buildDir, "lib", "libmono-native.dylib"), editorLibOutput);
-                    var editoBinOutput = Path.Combine(options.PlatformsFolder, "Editor", "Mac", "Mono", "bin");
-                    Directory.CreateDirectory(editoBinOutput);
-                    Utilities.FileCopy(Path.Combine(buildDir, "bin", "mono-sgen"), Path.Combine(editoBinOutput, "mono"));
-                    Utilities.Run("strip", "mono", null, editoBinOutput, Utilities.RunOptions.None);
-                    Utilities.DirectoryCopy(Path.Combine(buildDir, "etc"), Path.Combine(options.PlatformsFolder, platform.ToString(), "Binaries", "Mono", "etc"), true, true);
-                    Utilities.DirectoryCopy(Path.Combine(buildDir, "etc"), Path.Combine(options.PlatformsFolder, "Editor", platform.ToString(), "Binaries", "Mono", "etc"), true, true);
-                    var srcMonoLibs = Path.Combine(buildDir, "lib", "mono");
-                    var dstMonoLibs = Path.Combine(options.PlatformsFolder, platform.ToString(), "Binaries", "Mono", "lib", "mono");
-                    var dstMonoEditorLibs = Path.Combine(options.PlatformsFolder, "Editor", platform.ToString(), "Mono", "lib", "mono");
-                    Utilities.DirectoryCopy(Path.Combine(srcMonoLibs, "4.5"), Path.Combine(dstMonoLibs, "4.5"), false, true, "*.dll");
-                    Utilities.DirectoryCopy(Path.Combine(srcMonoLibs, "4.5"), Path.Combine(dstMonoEditorLibs, "4.5"), false, true, "*.dll");
-                    Utilities.DirectoryCopy(Path.Combine(srcMonoLibs, "gac"), Path.Combine(dstMonoLibs, "gac"), true, true, "*.dll");
-                    Utilities.DirectoryCopy(Path.Combine(srcMonoLibs, "gac"), Path.Combine(dstMonoEditorLibs, "gac"), true, true, "*.dll");
-                    Utilities.FileCopy(Path.Combine(srcMonoLibs, "4.5", "csc.exe"), Path.Combine(dstMonoEditorLibs, "4.5", "csc.exe"), true);
-                    Utilities.DirectoryCopy(Path.Combine(srcMonoLibs, "4.5", "Facades"), Path.Combine(dstMonoEditorLibs, "4.5", "Facades"), false, true, "*.dll");
-                    Utilities.DirectoryCopy(Path.Combine(srcMonoLibs, "4.5-api"), Path.Combine(dstMonoEditorLibs, "4.5-api"), false, true, "*.dll");
-                    Utilities.DirectoryCopy(Path.Combine(srcMonoLibs, "xbuild", "14.0"), Path.Combine(dstMonoEditorLibs, "xbuild", "14.0"), true, true);
-                    Utilities.DirectoryCopy(Path.Combine(srcMonoLibs, "xbuild-frameworks", ".NETFramework", "v4.5"), Path.Combine(dstMonoEditorLibs, "xbuild-frameworks", ".NETFramework", "v4.5"), true, true);
-                    Utilities.FilesDelete(dstMonoLibs, "*.pdb", true);
-                    Utilities.FilesDelete(dstMonoEditorLibs, "*.pdb", true);
+                    var editorBinOutput = Path.Combine(options.PlatformsFolder, "Editor", "Mac", "Mono", "bin");
+                    Directory.CreateDirectory(editorBinOutput);
+                    Utilities.FileCopy(Path.Combine(buildDir, "bin", "mono-sgen"), Path.Combine(editorBinOutput, "mono"));
+                    Utilities.Run("strip", "mono", null, editorBinOutput, Utilities.RunOptions.None);
+                    DeployData(options, platform, buildDir, true);
                     break;
                 }
                 }
             }
         }
+
+        private static readonly string[] MonoExportsCustom =
+        {
+            "mono_value_box",
+            "mono_add_internal_call",
+        };
+
+        private static readonly string[] MonoExportsIncludePrefixes =
+        {
+            "mono_free",
+            "mono_array_",
+            "mono_assembly_",
+            "mono_class_",
+            "mono_custom_attrs_",
+            "mono_debug_",
+            "mono_domain_",
+            "mono_exception_",
+            "mono_field_",
+            "mono_free_",
+            "mono_gc_",
+            "mono_gchandle_",
+            "mono_get_",
+            "mono_image_",
+            "mono_metadata_",
+            "mono_method_",
+            "mono_object_",
+            "mono_profiler_",
+            "mono_property_",
+            "mono_raise_exception",
+            "mono_reflection_",
+            "mono_runtime_",
+            "mono_signature_",
+            "mono_stack_",
+            "mono_string_",
+            "mono_thread_",
+            "mono_type_",
+            "mono_value_",
+        };
+
+        private static readonly string[] MonoExportsSkipPrefixes =
+        {
+            "mono_type_to_",
+            "mono_thread_state_",
+            "mono_thread_internal_",
+            "mono_thread_info_",
+            "mono_array_get_",
+            "mono_array_to_byvalarray",
+            "mono_array_handle_length",
+            "mono_array_addr_with_size_internal",
+            "mono_array_class_get_cached_function",
+            "mono_array_new_",
+            "mono_assembly_apply_binding",
+            "mono_assembly_bind_version",
+            "mono_assembly_binding_",
+            "mono_assembly_get_alc",
+            "mono_assembly_invoke_search_hook_internal",
+            "mono_assembly_is_in_gac",
+            "mono_assembly_load_from_gac",
+            "mono_assembly_load_from_assemblies_path",
+            "mono_assembly_load_full_gac_base_default",
+            "mono_assembly_load_publisher_policy",
+            "mono_assembly_name_from_token",
+            "mono_assembly_remap_version",
+            "mono_assembly_try_decode_skip_verification",
+            "mono_assembly_request_byname_nosearch",
+            "mono_assembly_request_prepare",
+            "mono_class_create_",
+            "mono_class_from_name_checked_aux",
+            "mono_class_get_appdomain_do_type_resolve_method",
+            "mono_class_get_appdomain_do_type_builder_resolve_method",
+            "mono_class_get_exception_handling_clause_class",
+            "mono_class_get_field_idx",
+            "mono_class_get_local_variable_info_class",
+            "mono_class_get_assembly_class",
+            "mono_class_get_asyncresult_class",
+            "mono_class_get_call_context_class",
+            "mono_class_get_class_interface_attribute_class",
+            "mono_class_get_com_",
+            "mono_class_get_context_class",
+            "mono_class_get_culture_info_class",
+            "mono_class_get_custom_attribute_",
+            "mono_class_get_date_time_class",
+            "mono_class_get_dbnull_class",
+            "mono_class_get_fixed_buffer_attribute_class",
+            "mono_class_get_geqcomparer_class",
+            "mono_class_get_guid_attribute_class",
+            "mono_class_get_icollection_class",
+            "mono_class_get_ienumerable_class",
+            "mono_class_get_iequatable_class",
+            "mono_class_get_interface_type_attribute_class",
+            "mono_class_get_ireadonly_collection_class",
+            "mono_class_get_ireadonly_list_class",
+            "mono_class_get_marshal_as_attribute_class",
+            "mono_class_get_missing_class",
+            "mono_class_get_module_builder_class",
+            "mono_class_get_module_class",
+            "mono_class_get_mono_assembly_class",
+            "mono_class_get_mono_cmethod_class",
+            "mono_class_get_mono_event_class",
+            "mono_class_get_mono_field_class",
+            "mono_class_get_mono_method_class",
+            "mono_class_get_mono_module_class",
+            "mono_class_get_mono_property_class",
+            "mono_class_get_nullref_class",
+            "mono_class_get_remoting_services_class",
+            "mono_class_get_runtime_compat_attr_class",
+            "mono_class_get_runtime_helpers_class",
+            "mono_class_get_security_critical_class",
+            "mono_class_get_security_manager_class",
+            "mono_class_get_security_safe_critical_class",
+            "mono_class_get_sta_thread_attribute_class",
+            "mono_class_get_type_builder_class",
+            "mono_class_get_unhandled_exception_event_args_class",
+            "mono_class_get_valuetuple_0_class",
+            "mono_class_get_valuetuple_1_class",
+            "mono_class_get_valuetuple_2_class",
+            "mono_class_get_valuetuple_3_class",
+            "mono_class_get_valuetuple_4_class",
+            "mono_class_get_valuetuple_5_class",
+            "mono_class_get_pointer_class",
+            "mono_class_get_activation_services_class",
+            "mono_class_get_runtime_generic_context_template",
+            "mono_class_get_virtual_methods",
+            "mono_class_get_magic_index",
+            "mono_class_get_method_body_class",
+            "mono_class_get_mono_parameter_info_class",
+            "mono_class_has_default_constructor",
+            "mono_class_has_gtd_parent",
+            "mono_class_has_parent",
+            "mono_class_implement_interface_slow",
+            "mono_class_is_ginst",
+            "mono_class_is_gtd",
+            "mono_class_is_interface",
+            "mono_class_is_magic_assembly",
+            "mono_class_is_valid_generic_instantiation",
+            "mono_class_is_variant_compatible_slow",
+            "mono_class_need_stelemref_method",
+            "mono_class_proxy_vtable",
+            "mono_class_setup_vtable_full",
+            "mono_class_setup_interface_id_internal",
+            "mono_class_try_get_unmanaged_function_pointer_attribute_class",
+            "mono_class_try_get_math_class",
+            "mono_class_unregister_image_generic_subclasses",
+            "mono_custom_attrs_construct_by_type",
+            "mono_custom_attrs_data_construct",
+            "mono_custom_attrs_from_builders_handle",
+            "mono_debug_add_assembly",
+            "mono_debug_format",
+            "mono_debug_handles",
+            "mono_debug_initialized",
+            "mono_debug_log_thread_state_to_string",
+            "mono_debug_open_image",
+            "mono_debug_read_method",
+            "mono_domain_asmctx_from_path",
+            "mono_domain_assembly_preload",
+            "mono_domain_assembly_search",
+            "mono_domain_create_appdomain_checked",
+            "mono_domain_create_appdomain_internal",
+            "mono_domain_fire_assembly_load",
+            "mono_domain_fire_assembly_unload",
+            "mono_domain_from_appdomain_handle",
+            "mono_domain_code_",
+            "mono_exception_new_argument_internal",
+            "mono_exception_new_by_name_domain",
+            "mono_exception_stacktrace_obj_walk",
+            "mono_field_get_addr",
+            "mono_field_get_rva",
+            "mono_field_resolve_flags",
+            "mono_free_static_data",
+            "mono_gc_init_finalizer_thread",
+            "mono_get_array_new_va_signature",
+            "mono_get_corlib_version",
+            "mono_get_domainvar",
+            "mono_get_exception_argument_internal",
+            "mono_get_exception_missing_member",
+            "mono_get_exception_runtime_wrapped_checked",
+            "mono_get_exception_type_initialization_checked",
+            "mono_get_field_token",
+            "mono_get_int_type",
+            "mono_get_method_from_token",
+            "mono_get_reflection_missing_object",
+            "mono_get_runtime_build_version",
+            "mono_get_seq_point_for_native_offset",
+            "mono_get_unique_iid",
+            "mono_get_version_info",
+            "mono_get_vtable_var",
+            "mono_get_xdomain_marshal_type",
+            "mono_image_add_cattrs",
+            "mono_image_add_decl_security",
+            "mono_image_add_memberef_row",
+            "mono_image_add_methodimpl",
+            "mono_image_basic_method",
+            "mono_image_create_method_token",
+            "mono_image_emit_manifest",
+            "mono_image_fill_export_table",
+            "mono_image_fill_export_table_from_class",
+            "mono_image_fill_export_table_from_module",
+            "mono_image_fill_export_table_from_type_forwarders",
+            "mono_image_fill_file_table",
+            "mono_image_fill_module_table",
+            "mono_image_get_array_token",
+            "mono_image_get_event_info",
+            "mono_image_get_field_info",
+            "mono_image_get_fieldref_token",
+            "mono_image_get_generic_param_info",
+            "mono_image_get_method_info",
+            "mono_image_get_methodspec_token",
+            "mono_image_get_property_info",
+            "mono_image_get_type_info",
+            "mono_image_walk_resource_tree",
+            "mono_image_storage_",
+            "mono_metadata_custom_modifiers_",
+            "mono_metadata_class_equal",
+            "mono_metadata_field_info_full",
+            "mono_metadata_fnptr_equal",
+            "mono_metadata_generic_param_equal_internal",
+            "mono_metadata_parse_array_internal",
+            "mono_metadata_parse_generic_param",
+            "mono_metadata_parse_type_internal",
+            "mono_metadata_signature_dup_internal_with_padding",
+            "mono_metadata_signature_vararg_match",
+            "mono_method_check_inlining",
+            "mono_method_get_equivalent_method",
+            "mono_method_is_constructor",
+            "mono_method_is_valid_generic_instantiation",
+            "mono_method_is_valid_in_context",
+            "mono_method_securestring_",
+            "mono_method_signature_checked",
+            "mono_method_signature_internal",
+            "mono_object_new_by_vtable",
+            "mono_object_get_data",
+            "mono_object_unbox_internal",
+            "mono_raise_exception_with_ctx",
+            "mono_reflection_get_type_internal",
+            "mono_reflection_get_type_internal_dynamic",
+            "mono_reflection_get_type_with_rootimage",
+            "mono_reflection_method_get_handle",
+            "mono_reflection_type_get_underlying_system_type",
+            "mono_reflection_cleanup_",
+            "mono_runtime_capture_context",
+            "mono_runtime_delegate_try_invoke_handle",
+            "mono_runtime_set_execution_mode",
+            "mono_runtime_walk_stack_with_ctx",
+            "mono_runtime_create_",
+            "mono_signature_to_name",
+            "mono_string_builder_new",
+            "mono_string_from_bstr_common",
+            "mono_string_get_pinned",
+            "mono_string_is_interned_lookup",
+            "mono_string_new_utf32_checked",
+            "mono_string_to_utf8_internal",
+            "mono_string_chars_internal",
+            "mono_string_length_internal",
+            "mono_string_new_internal",
+            "mono_string_utf16_to_builder_copy",
+            "mono_string_utf16len_to_builder",
+            "mono_string_utf8len_to_builder",
+            "mono_thread_abort",
+            "mono_thread_abort_dummy",
+            "mono_thread_attach_cb",
+            "mono_thread_attach_internal",
+            "mono_thread_cleanup_fn",
+            "mono_thread_clear_interruption_requested",
+            "mono_thread_create_internal",
+            "mono_thread_create_internal_handle",
+            "mono_thread_current_for_thread",
+            "mono_thread_detach_internal",
+            "mono_thread_execute_interruption",
+            "mono_thread_execute_interruption_ptr",
+            "mono_thread_execute_interruption_void",
+            "mono_thread_get_managed_sp",
+            "mono_thread_get_name",
+            "mono_thread_resume",
+            "mono_thread_set_interruption_requested",
+            "mono_thread_set_name_",
+            "mono_thread_start_cb",
+            "mono_thread_suspend",
+            "mono_type_array_get_and_resolve_raw",
+            "mono_type_array_get_and_resolve_with_modifiers",
+            "mono_type_elements_shift_bits",
+            "mono_type_equal",
+            "mono_type_from_opcode",
+            "mono_type_get_type_",
+            "mono_type_get_name_recurse",
+            "mono_type_get_underlying_type_",
+            "mono_type_hash",
+            "mono_type_init_",
+            "mono_type_initialization_",
+            "mono_type_is_enum_type",
+            "mono_type_is_byref_internal",
+            "mono_type_is_generic_argument",
+            "mono_type_is_valid_type_in_context",
+            "mono_type_is_value_type",
+            "mono_type_is_native_blittable",
+            "mono_type_is_valid_in_context",
+            "mono_type_is_valid_type_in_context_full",
+            "mono_type_normalize",
+            "mono_type_name_check_byref",
+            "mono_type_retrieve_from_typespec",
+            "mono_type_with_mods_init",
+            "mono_value_hash_table_",
+        };
     }
 }

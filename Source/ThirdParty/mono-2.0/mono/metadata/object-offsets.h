@@ -55,8 +55,6 @@ DECL_SIZE(gpointer)
 DECL_OFFSET(MonoObject, vtable)
 DECL_OFFSET(MonoObject, synchronisation)
 
-DECL_OFFSET(MonoObjectHandlePayload, __raw)
-
 DECL_OFFSET(MonoClass, interface_bitmap)
 DECL_OFFSET(MonoClass, _byval_arg)
 DECL_OFFSET(MonoClass, cast_class)
@@ -69,6 +67,7 @@ DECL_OFFSET(MonoClass, parent)
 DECL_OFFSET(MonoClass, rank)
 DECL_OFFSET(MonoClass, sizes)
 DECL_OFFSET(MonoClass, supertypes)
+DECL_OFFSET(MonoClass, class_kind)
 
 DECL_OFFSET(MonoVTable, klass)
 DECL_OFFSET(MonoVTable, max_interface_id)
@@ -76,6 +75,7 @@ DECL_OFFSET(MonoVTable, interface_bitmap)
 DECL_OFFSET(MonoVTable, vtable)
 DECL_OFFSET(MonoVTable, rank)
 DECL_OFFSET(MonoVTable, initialized)
+DECL_OFFSET(MonoVTable, flags)
 DECL_OFFSET(MonoVTable, type)
 DECL_OFFSET(MonoVTable, runtime_generic_context)
 
@@ -134,6 +134,9 @@ DECL_OFFSET(MonoThreadsSync, nest)
 
 DECL_OFFSET(MonoProfilerCallContext, method)
 DECL_OFFSET(MonoProfilerCallContext, return_value)
+DECL_OFFSET(MonoProfilerCallContext, args)
+
+DECL_OFFSET(MonoErrorExternal, init)
 
 #ifdef HAVE_SGEN_GC
 DECL_OFFSET(SgenClientThreadInfo, in_critical_region)
@@ -244,8 +247,6 @@ DECL_OFFSET (MonoContext, fregs)
 
 DECL_OFFSET(MonoLMF, lmf_addr)
 
-DECL_OFFSET(SeqPointInfo, ss_trigger_page)
-
 DECL_OFFSET(DynCallArgs, res)
 DECL_OFFSET(DynCallArgs, res2)
 #endif
@@ -257,6 +258,8 @@ DECL_OFFSET(GSharedVtCallInfo, vret_arg_reg)
 DECL_OFFSET(GSharedVtCallInfo, ret_marshal)
 DECL_OFFSET(GSharedVtCallInfo, vret_slot)
 DECL_OFFSET(GSharedVtCallInfo, gsharedvt_in)
+
+DECL_OFFSET(SeqPointInfo, ss_trigger_page)
 #endif
 
 #if defined(TARGET_ARM64)
@@ -274,9 +277,7 @@ DECL_OFFSET(SeqPointInfo, ss_tramp_addr)
 
 #if defined(TARGET_AMD64) || defined(TARGET_ARM) || defined(TARGET_ARM64)
 DECL_OFFSET(SeqPointInfo, bp_addrs)
-#endif
 
-#if defined(TARGET_AMD64) || defined(TARGET_ARM) || defined(TARGET_ARM64)
 DECL_OFFSET(CallContext, gregs)
 DECL_OFFSET(CallContext, fregs)
 DECL_OFFSET(CallContext, stack_size)

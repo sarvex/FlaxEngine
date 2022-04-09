@@ -68,6 +68,7 @@ public class mono : DepsModule
                 options.OutputFiles.Add("Bcrypt.lib");
             }
             options.DependencyFiles.Add(Path.Combine(depsRoot, "MonoPosixHelper.dll"));
+            options.DependencyFiles.Add(Path.Combine(depsRoot, "libmono-btls-shared.dll"));
             break;
         }
         case TargetPlatform.Linux:

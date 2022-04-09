@@ -20,13 +20,12 @@
 #include <mono/utils/mono-compiler.h>
 #include <mono/utils/w32api.h>
 #include "image.h"
+#include "image-internals.h"
 
 #define STATUS_SUCCESS 0x00000000L
 #define STATUS_INVALID_IMAGE_FORMAT 0xC000007BL
 
-#if G_HAVE_API_SUPPORT(HAVE_CLASSIC_WINAPI_SUPPORT)
 MONO_API HRESULT STDAPICALLTYPE MonoFixupCorEE(HMODULE ModuleHandle);
-#endif
 
 /* Defined by the linker. */
 #ifndef _MSC_VER
@@ -47,7 +46,7 @@ void mono_load_coree (const char* file_name);
 void mono_fixup_exe_image (MonoImage* image);
 
 /* Declared in image.c. */
-MonoImage* mono_image_open_from_module_handle (HMODULE module_handle, char* fname, gboolean has_entry_point, MonoImageOpenStatus* status);
+MonoImage* mono_image_open_from_module_handle (MonoAssemblyLoadContext *alc, HMODULE module_handle, char* fname, gboolean has_entry_point, MonoImageOpenStatus* status);
 
 #endif /* HOST_WIN32 */
 

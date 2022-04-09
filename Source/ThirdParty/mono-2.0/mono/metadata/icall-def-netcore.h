@@ -41,14 +41,18 @@ HANDLES(ARRAY_0, "CanChangePrimitive",  ves_icall_System_Array_CanChangePrimitiv
 HANDLES(ARRAY_1, "ClearInternal", ves_icall_System_Array_ClearInternal, void, 3, (MonoArray, int, int))
 HANDLES(ARRAY_3, "CreateInstanceImpl",   ves_icall_System_Array_CreateInstanceImpl, MonoArray, 3, (MonoReflectionType, MonoArray, MonoArray))
 HANDLES(ARRAY_4, "FastCopy",         ves_icall_System_Array_FastCopy, MonoBoolean, 5, (MonoArray, int, MonoArray, int, int))
-NOHANDLES(ICALL(ARRAY_5, "GetGenericValue_icall", ves_icall_System_Array_GetGenericValue_icall))
+// Generic ref/out parameters are not supported by HANDLES(), so NOHANDLES().
+// FIXME HANDLES should handle this trivially. Do it separately.
+NOHANDLES(ICALL(ARRAY_5, "GetGenericValueImpl", ves_icall_System_Array_GetGenericValueImpl))
 HANDLES(ARRAY_6, "GetLength",        ves_icall_System_Array_GetLength, gint32, 2, (MonoArray, gint32))
 HANDLES(ARRAY_15, "GetLongLength",   ves_icall_System_Array_GetLongLength, gint64, 2, (MonoArray, gint32))
 HANDLES(ARRAY_7, "GetLowerBound",    ves_icall_System_Array_GetLowerBound, gint32, 2, (MonoArray, gint32))
 HANDLES(ARRAY_8, "GetRank",          ves_icall_System_Array_GetRank, gint32, 1, (MonoObject))
 HANDLES(ARRAY_9, "GetValue",         ves_icall_System_Array_GetValue, MonoObject, 2, (MonoArray, MonoArray))
 HANDLES(ARRAY_10, "GetValueImpl",    ves_icall_System_Array_GetValueImpl, MonoObject, 2, (MonoArray, guint32))
-NOHANDLES(ICALL(ARRAY_11, "SetGenericValue_icall", ves_icall_System_Array_SetGenericValue_icall))
+// Generic ref/out parameters are not supported by HANDLES(), so NOHANDLES().
+// FIXME HANDLES should handle this trivially. Do it separately.
+NOHANDLES(ICALL(ARRAY_11, "SetGenericValueImpl", ves_icall_System_Array_SetGenericValueImpl))
 HANDLES(ARRAY_12, "SetValue",         ves_icall_System_Array_SetValue, void, 3, (MonoArray, MonoObject, MonoArray))
 HANDLES(ARRAY_13, "SetValueImpl",  ves_icall_System_Array_SetValueImpl, void, 3, (MonoArray, MonoObject, guint32))
 HANDLES(ARRAY_14, "SetValueRelaxedImpl",  ves_icall_System_Array_SetValueRelaxedImpl, void, 3, (MonoArray, MonoObject, guint32))
@@ -375,6 +379,7 @@ HANDLES(ALC_4, "InternalGetLoadedAssemblies", ves_icall_System_Runtime_Loader_As
 HANDLES(ALC_2, "InternalInitializeNativeALC", ves_icall_System_Runtime_Loader_AssemblyLoadContext_InternalInitializeNativeALC, gpointer, 3, (gpointer, MonoBoolean, MonoBoolean))
 HANDLES(ALC_1, "InternalLoadFile", ves_icall_System_Runtime_Loader_AssemblyLoadContext_InternalLoadFile, MonoReflectionAssembly, 3, (gpointer, MonoString, MonoStackCrawlMark_ptr))
 HANDLES(ALC_3, "InternalLoadFromStream", ves_icall_System_Runtime_Loader_AssemblyLoadContext_InternalLoadFromStream, MonoReflectionAssembly, 5, (gpointer, gpointer, gint32, gpointer, gint32))
+HANDLES(ALC_6, "InternalLoadUnmanagedDllFromPath", ves_icall_System_Runtime_Loader_AssemblyLoadContext_InternalLoadUnmanagedDllFromPath, gpointer, 1, (MonoString))
 
 ICALL_TYPE(RUNIMPORT, "System.Runtime.RuntimeImports", RUNIMPORT_1)
 NOHANDLES(ICALL(RUNIMPORT_1, "RhBulkMoveWithWriteBarrier", ves_icall_System_Runtime_RuntimeImports_RhBulkMoveWithWriteBarrier))
@@ -446,7 +451,7 @@ NOHANDLES(ICALL(STRING_5, ".ctor(char[],int,int)", ves_icall_System_String_ctor_
 NOHANDLES(ICALL(STRING_6, ".ctor(sbyte*)", ves_icall_System_String_ctor_RedirectToCreateString))
 NOHANDLES(ICALL(STRING_7, ".ctor(sbyte*,int,int)", ves_icall_System_String_ctor_RedirectToCreateString))
 NOHANDLES(ICALL(STRING_8, ".ctor(sbyte*,int,int,System.Text.Encoding)", ves_icall_System_String_ctor_RedirectToCreateString))
-HANDLES(STRING_9, "FastAllocateString", ves_icall_System_String_FastAllocateString, MonoString, 1, (gint32))
+HANDLES(STRING_9, "FastAllocateString", ves_icall_System_String_InternalAllocateStr, MonoString, 1, (gint32))
 HANDLES(STRING_10, "InternalIntern", ves_icall_System_String_InternalIntern, MonoString, 1, (MonoString))
 HANDLES(STRING_11, "InternalIsInterned", ves_icall_System_String_InternalIsInterned, MonoString, 1, (MonoString))
 
@@ -465,8 +470,6 @@ NOHANDLES(ICALL(ILOCK_7, "CompareExchange(intptr&,intptr,intptr)", ves_icall_Sys
 NOHANDLES(ICALL(ILOCK_8, "CompareExchange(long&,long,long)", ves_icall_System_Threading_Interlocked_CompareExchange_Long))
 NOHANDLES(ICALL(ILOCK_9, "CompareExchange(object&,object&,object&,object&)", ves_icall_System_Threading_Interlocked_CompareExchange_Object))
 NOHANDLES(ICALL(ILOCK_10, "CompareExchange(single&,single,single)", ves_icall_System_Threading_Interlocked_CompareExchange_Single))
-// aot-compiler.c and aot-runtime.c know about this.
-NOHANDLES(ICALL(ILOCK_10b, "CompareExchange_T", ves_icall_System_Threading_Interlocked_CompareExchange_T))
 NOHANDLES(ICALL(ILOCK_11, "Decrement(int&)", ves_icall_System_Threading_Interlocked_Decrement_Int))
 NOHANDLES(ICALL(ILOCK_12, "Decrement(long&)", ves_icall_System_Threading_Interlocked_Decrement_Long))
 NOHANDLES(ICALL(ILOCK_14, "Exchange(double&,double)", ves_icall_System_Threading_Interlocked_Exchange_Double))
@@ -475,8 +478,6 @@ NOHANDLES(ICALL(ILOCK_16, "Exchange(intptr&,intptr)", ves_icall_System_Threading
 NOHANDLES(ICALL(ILOCK_17, "Exchange(long&,long)", ves_icall_System_Threading_Interlocked_Exchange_Long))
 NOHANDLES(ICALL(ILOCK_18, "Exchange(object&,object&,object&)", ves_icall_System_Threading_Interlocked_Exchange_Object))
 NOHANDLES(ICALL(ILOCK_19, "Exchange(single&,single)", ves_icall_System_Threading_Interlocked_Exchange_Single))
-// aot-compiler.c and aot-runtime.c know about this.
-NOHANDLES(ICALL(ILOCK_19b, "Exchange_T", ves_icall_System_Threading_Interlocked_Exchange_T))
 NOHANDLES(ICALL(ILOCK_20, "Increment(int&)", ves_icall_System_Threading_Interlocked_Increment_Int))
 NOHANDLES(ICALL(ILOCK_21, "Increment(long&)", ves_icall_System_Threading_Interlocked_Increment_Long))
 NOHANDLES(ICALL(ILOCK_22, "MemoryBarrierProcessWide", ves_icall_System_Threading_Interlocked_MemoryBarrierProcessWide))
